@@ -10,7 +10,9 @@
 
 #include "leds.h"
 #include "push_button.h"
-
+#include "console.h"
+#include "i2c.h"
+#include "at42qt2120.h"
 
 
 #endif /* MAIN_H_ */

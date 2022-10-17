@@ -44,32 +44,129 @@
 #include "cybsp.h"
 
 #include "main.h"
+#define ENABLE_I2C 1
+
+/******************************************************************************
+ * These MACROS where defined using information for the AT42QT2120 datasheet.
+ * and the ECE453 Development Platform schematics.
+ *****************************************************************************/
+#define BLUE_LED_REG_ADDR				(28+4)
+#define BLUE_LED_REG_VAL_ON				(0x3)
+#define BLUE_LED_REG_VAL_OFF			(0x1)
+
+#define GREEN_LED_REG_ADDR				(28+5)
+#define GREEN_LED_REG_VAL_ON			(0x3)
+#define GREEN_LED_REG_VAL_OFF			(0x1)
+
+#define YELLOW_LED_REG_ADDR				(28+6)
+#define YELLOW_LED_REG_VAL_ON			(0x3)
+#define YELLOW_LED_REG_VAL_OFF			(0x1)
+
+#define RED_LED_REG_ADDR				(28+7)
+#define RED_LED_REG_VAL_ON				(0x3)
+#define RED_LED_REG_VAL_OFF				(0x1)
+
+
 
 int main(void)
 {
-    cy_rslt_t result;
+	uint8_t button_status;
 
-#if 0
-    /* Initialize the device and board peripherals */
-    result = cybsp_init() ;
-    if (result != CY_RSLT_SUCCESS)
-    {
-        CY_ASSERT(0);
-    }
+    console_init();
+
+    printf("\x1b[2J\x1b[;H");
+
+    printf("******************\n\r");
+    printf("* ECE453 Dev Platform\n\r");
+
+    printf("* -- Initializing user push button\n\r");
+	push_button_init();
+
+    printf("* -- Initializing user LED\n\r");
+    leds_init();
+
+#if ENABLE_I2C
+    printf("* -- Initializing I2C Bus\n\r");
+    i2c_init();
+
+    printf("* -- Initializing AT42QT2120\n\r");
+    AT42QT2120_init();
+
+    button_status = AT42QT2120_read_buttons();
 #endif
 
-    leds_init();
-    push_button_init();
 
-    __enable_irq();
+    printf("* -- Enabling Interrupts\n\r");
+	/* Enable global interrupts */
+	__enable_irq();
 
-    for (;;)
+    printf("****************** \r\n\n");
+
+    while(1)
     {
+#if ENABLE_I2C
+    	if(ALERT_AT42QT2120_CHANGE)
+		{
+			ALERT_AT42QT2120_CHANGE = false;
+
+			button_status = AT42QT2120_read_buttons();
+			if(button_status & 0x01)
+			{
+				printf("BLUE ON\n\r");
+				AT42QT2120_write_reg(BLUE_LED_REG_ADDR, BLUE_LED_REG_VAL_ON);
+			}
+			else
+			{
+				AT42QT2120_write_reg(BLUE_LED_REG_ADDR, BLUE_LED_REG_VAL_OFF);
+			}
+
+			if(button_status & 0x04)
+			{
+				printf("YELLOW ON\n\r");
+				AT42QT2120_write_reg(YELLOW_LED_REG_ADDR, YELLOW_LED_REG_VAL_ON);
+			}
+			else
+			{
+				AT42QT2120_write_reg(YELLOW_LED_REG_ADDR, YELLOW_LED_REG_VAL_OFF);
+			}
+
+			if(button_status & 0x02)
+			{
+				printf("GREEN ON\n\r");
+				AT42QT2120_write_reg(GREEN_LED_REG_ADDR, GREEN_LED_REG_VAL_ON);
+			}
+			else
+			{
+				AT42QT2120_write_reg(GREEN_LED_REG_ADDR, GREEN_LED_REG_VAL_OFF);
+			}
+
+			if(button_status & 0x08)
+			{
+				printf("RED ON\n\r");
+				AT42QT2120_write_reg(RED_LED_REG_ADDR, RED_LED_REG_VAL_ON);
+			}
+			else
+			{
+				AT42QT2120_write_reg(RED_LED_REG_ADDR, RED_LED_REG_VAL_OFF);
+			}
+		}
+#endif
     	if(ALERT_PUSH_BUTTON)
     	{
     		ALERT_PUSH_BUTTON = false;
+    		printf("ALERT_PUSH_BUTTON Pressed!\n\r");
     	}
+
+    	if(ALERT_CONSOLE_RX)
+		{
+			ALERT_CONSOLE_RX = false;
+			printf("\r\nRx --> %s\r\n", pcInputString);
+			cInputIndex = 0;
+			memset(pcInputString,0,DEBUG_MESSAGE_MAX_LEN);
+		}
     }
 }
+
+
 
 /* [] END OF FILE */
